@@ -5,9 +5,14 @@ jest.mock("@supabase/supabase-js", () => ({
     mockCreateClient(url, key, options),
 }));
 
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  __esModule: true,
-  default: { mocked: "async-storage" },
+const mockGetItemAsync = jest.fn(async (_key: string) => "stored-value");
+const mockSetItemAsync = jest.fn(async (_key: string, _value: string) => undefined);
+const mockDeleteItemAsync = jest.fn(async (_key: string) => undefined);
+
+jest.mock("expo-secure-store", () => ({
+  getItemAsync: (key: string) => mockGetItemAsync(key),
+  setItemAsync: (key: string, value: string) => mockSetItemAsync(key, value),
+  deleteItemAsync: (key: string) => mockDeleteItemAsync(key),
 }));
 
 jest.mock("react-native-url-polyfill/auto", () => ({}));
@@ -18,6 +23,9 @@ describe("lib/supabase", () => {
   beforeEach(() => {
     jest.resetModules();
     mockCreateClient.mockClear();
+    mockGetItemAsync.mockClear();
+    mockSetItemAsync.mockClear();
+    mockDeleteItemAsync.mockClear();
     process.env = {
       ...ORIGINAL_ENV,
       EXPO_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
@@ -38,13 +46,30 @@ describe("lib/supabase", () => {
       "anon-key-123",
       expect.objectContaining({
         auth: expect.objectContaining({
-          storage: { mocked: "async-storage" },
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: false,
         }),
       })
     );
+  });
+
+  it("backs session storage with expo-secure-store, not plain AsyncStorage", async () => {
+    require("../supabase");
+
+    const options = mockCreateClient.mock.calls[0][2] as {
+      auth: { storage: { getItem: (k: string) => unknown; setItem: (k: string, v: string) => unknown; removeItem: (k: string) => unknown } };
+    };
+    const storage = options.auth.storage;
+
+    await storage.getItem("sb-session");
+    expect(mockGetItemAsync).toHaveBeenCalledWith("sb-session");
+
+    await storage.setItem("sb-session", "token-value");
+    expect(mockSetItemAsync).toHaveBeenCalledWith("sb-session", "token-value");
+
+    await storage.removeItem("sb-session");
+    expect(mockDeleteItemAsync).toHaveBeenCalledWith("sb-session");
   });
 
   it("throws a clear error when env vars are missing", () => {
