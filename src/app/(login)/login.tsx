@@ -1,23 +1,23 @@
-import React from 'react';
-import {Pressable, Text, TextInput, View} from "react-native";
+import React, {useEffect} from 'react';
+import {ActivityIndicator, Pressable, Text, TextInput, View} from "react-native";
 import {defaultStyles as style} from "@/constants/defaultStyles";
 import {router} from "expo-router";
 import {Controller, useForm} from "react-hook-form";
 import { Alert } from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
 import {Eye, EyeOff} from "lucide-react-native";
+import {trpc} from "@/lib/trpc";
+import {useMutation} from "@tanstack/react-query";
+import {useSession} from "@/hooks/useSession";
 
 Login.propTypes = {
 
 };
 
-function proceedToLogin(){
-    // FUTURE API CALL
-
-    router.navigate('/home');
-}
-
 function Login() {
+
+    const loginMutation = useMutation(trpc.auth.login.mutationOptions());
+    const signIn = useSession((state) => state.signIn);
 
     const { control, handleSubmit, formState: { errors, isValid } } = useForm({
         defaultValues: { email: "" , password: ""},
@@ -27,6 +27,7 @@ function Login() {
     const [hidePassword, setHidePassword] = React.useState(true);
 
     return (
+
         <SafeAreaView style={ style.container}>
             <View style={style.container}>
                 <Text style={style.title}>Welcome To SPLYT</Text>
@@ -99,7 +100,7 @@ function Login() {
 
             <View style={style.container}>
                 <Pressable
-                    disabled={!isValid}
+                    disabled={!isValid || loginMutation.isPending}
                     style={({ pressed }) => [
                         style.button,
                         !isValid && style.buttonDisabled,
@@ -107,7 +108,11 @@ function Login() {
                     ]}
                     onPress={handleSubmit(proceedToLogin)}
                 >
-                    <Text style={style.buttonText}>Login</Text>
+                    {loginMutation.isPending ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={style.buttonText}>Login</Text>
+                    )}
                 </Pressable>
             </View>
 
@@ -115,6 +120,19 @@ function Login() {
 
         </SafeAreaView>
     );
+
+    function proceedToLogin(data: {email: string, password: string}){
+
+        loginMutation.mutate(data, {
+            onSuccess: async ({ token }) => {
+                await signIn(token);
+                router.navigate('/home');
+            },
+            onError: (error) => {
+                Alert.alert("Login failed", error.message);
+            },
+        });
+    }
 }
 
 export default Login;
