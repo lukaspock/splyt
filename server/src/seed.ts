@@ -15,3 +15,8 @@ export const seedDevUser = async () => {
   });
   console.log(`Seeded dev user: ${seedEmail} / ${seedPassword}`);
 };
+
+if (import.meta.main) {
+  await seedDevUser();
+  process.exit(0);
+}

@@ -24,8 +24,15 @@ export const useSession = create<SessionState>((set) => ({
       return;
     }
 
-    const user = await queryClient.fetchQuery(trpc.users.getMe.queryOptions());
-    set({ session: token, user, isLoading: false });
+    try{
+      const user = await queryClient.fetchQuery(trpc.users.getMe.queryOptions())
+
+      set({ session: token, user, isLoading: false });
+    }
+    catch (error) {
+      useSession.getState().signOut();
+    }
+
   },
 
   signIn: async (token) => {
