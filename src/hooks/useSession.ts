@@ -1,15 +1,26 @@
 import { create } from "zustand";
-import * as SecureStore from "expo-secure-store";
-import { SafeUser } from "../../server/src/types/User";
-import { trpc, queryClient } from "@/lib/trpc";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
+import type { OnboardingGoal, Profile } from "@/types/database";
 
 type SessionState = {
-  session: string | null;
-  user: SafeUser | null;
+  session: Session | null;
+  user: Profile | null;
   isLoading: boolean;
   hydrate: () => Promise<void>;
-  signIn: (token: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (
+    name: string,
+    email: string,
+    password: string,
+    goal: OnboardingGoal | null,
+  ) => Promise<Session | null>;
   signOut: () => Promise<void>;
+};
+
+const fetchProfile = async (userId: string): Promise<Profile | null> => {
+  const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+  return data as Profile | null;
 };
 
 export const useSession = create<SessionState>((set) => ({
@@ -18,31 +29,40 @@ export const useSession = create<SessionState>((set) => ({
   isLoading: true,
 
   hydrate: async () => {
-    const token = await SecureStore.getItemAsync("token");
-    if (!token) {
-      set({ session: null, user: null, isLoading: false });
-      return;
-    }
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session ? await fetchProfile(session.user.id) : null;
+    set({ session, user, isLoading: false });
 
-    try{
-      const user = await queryClient.fetchQuery(trpc.users.getMe.queryOptions())
-
-      set({ session: token, user, isLoading: false });
-    }
-    catch (error) {
-      useSession.getState().signOut();
-    }
-
+    supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      const newUser = newSession ? await fetchProfile(newSession.user.id) : null;
+      set({ session: newSession, user: newUser, isLoading: false });
+    });
   },
 
-  signIn: async (token) => {
-    await SecureStore.setItemAsync("token", token);
-    const user = await queryClient.fetchQuery(trpc.users.getMe.queryOptions());
-    set({ session: token, user });
+  signIn: async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    const user = await fetchProfile(data.session.user.id);
+    set({ session: data.session, user, isLoading: false });
+  },
+
+  signUp: async (name, email, password, goal) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name, goal } },
+    });
+    if (error) throw error;
+    if (data.session) {
+      const user = await fetchProfile(data.session.user.id);
+      set({ session: data.session, user, isLoading: false });
+    }
+    return data.session;
   },
 
   signOut: async () => {
-    await SecureStore.deleteItemAsync("token");
-    set({ session: null, user: null });
+    await supabase.auth.signOut();
   },
 }));

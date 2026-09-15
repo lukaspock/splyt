@@ -1,18 +1,13 @@
-import React from 'react';
-import {View, Text, ActivityIndicator} from "react-native";
-import {defaultStyles as style} from "@/constants/defaultStyles";
-import { trpc } from "@/lib/trpc";
-import {useSession} from "@/hooks/useSession";
+import {SafeAreaView} from "react-native-safe-area-context";
+import {budgetStyles as bstyle} from "@/constants/budgetStyles";
+import DashboardScreen from "@/components/DashboardScreen";
 
-const Home = () => {
-
-    const { session, user, isLoading } = useSession();
-
+function Home() {
     return (
-        <View style={style.container}>
-            <Text>Welcome Home { user?.name }!</Text>
-        </View>
+        <SafeAreaView style={bstyle.screen} edges={["top", "bottom"]}>
+            <DashboardScreen/>
+        </SafeAreaView>
     );
-};
+}
 
 export default Home;

@@ -76,4 +76,10 @@ export const defaultStyles = StyleSheet.create({
         fontSize: 12,
         marginTop: 4,
     },
+    linkText: {
+        fontSize: 14,
+        color: "#208AEF",
+        textAlign: "center",
+        marginTop: 16,
+    },
 });
