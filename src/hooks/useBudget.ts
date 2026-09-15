@@ -28,11 +28,11 @@ export function useAddBudgetCategory() {
     const userId = useSession((state) => state.session?.user.id);
 
     return useMutation({
-        mutationFn: async ({name, type}: { name: string; type: BudgetCategoryType }) => {
+        mutationFn: async ({name, type, icon}: { name: string; type: BudgetCategoryType; icon?: string }) => {
             if (!userId) throw new Error("Not signed in");
             const {data, error} = await supabase
                 .from("budget_categories")
-                .insert({user_id: userId, name, type})
+                .insert({user_id: userId, name, type, ...(icon ? {icon} : {})})
                 .select()
                 .single();
             if (error) throw error;

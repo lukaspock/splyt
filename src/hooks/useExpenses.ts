@@ -35,11 +35,11 @@ export function useAddExpense() {
     const userId = useSession((state) => state.session?.user.id);
 
     return useMutation({
-        mutationFn: async ({categoryId, amountCents, spentAt}: {categoryId: string; amountCents: number; spentAt: string}) => {
+        mutationFn: async ({categoryId, amountCents, spentAt, note}: {categoryId: string; amountCents: number; spentAt: string; note?: string}) => {
             if (!userId) throw new Error("Not signed in");
             const {data, error} = await supabase
                 .from("expenses")
-                .insert({user_id: userId, category_id: categoryId, amount_cents: amountCents, spent_at: spentAt})
+                .insert({user_id: userId, category_id: categoryId, amount_cents: amountCents, spent_at: spentAt, note: note?.trim() || null})
                 .select()
                 .single();
             if (error) throw error;

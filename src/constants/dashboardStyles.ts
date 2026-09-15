@@ -166,12 +166,7 @@ export const dashboardStyles = StyleSheet.create({
     chipTextSelected: {
         color: "#FFFFFF",
     },
-    expenseFormRow: {
-        flexDirection: "row",
-        gap: 10,
-    },
     expenseAmountWrapper: {
-        flex: 1,
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "#FFFFFF",
@@ -189,28 +184,6 @@ export const dashboardStyles = StyleSheet.create({
         color: "#1C1C1E",
         paddingVertical: 10,
         paddingLeft: 4,
-    },
-    dayToggle: {
-        flexDirection: "row",
-        backgroundColor: "#FFFFFF",
-        borderRadius: 10,
-        overflow: "hidden",
-    },
-    dayToggleOption: {
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        justifyContent: "center",
-    },
-    dayToggleOptionSelected: {
-        backgroundColor: "#2C2C2E",
-    },
-    dayToggleText: {
-        fontSize: 13,
-        fontWeight: "600",
-        color: "#1C1C1E",
-    },
-    dayToggleTextSelected: {
-        color: "#FFFFFF",
     },
     logButton: {
         backgroundColor: "#208AEF",
@@ -256,5 +229,80 @@ export const dashboardStyles = StyleSheet.create({
         fontSize: 13,
         fontWeight: "600",
         color: "#1C1C1E",
+    },
+    recentNote: {
+        fontSize: 12,
+        color: "#8E8E93",
+        marginTop: 1,
+    },
+    noteInput: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 10,
+        fontSize: 14,
+        color: "#1C1C1E",
+    },
+
+    // Streak celebration overlay
+    celebrationBackdrop: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.55)",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+    },
+    celebrationCard: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 24,
+        padding: 28,
+        alignItems: "center",
+        gap: 12,
+        width: "100%",
+        maxWidth: 340,
+    },
+    celebrationFlame: {
+        fontSize: 72,
+    },
+    celebrationStreakText: {
+        fontSize: 20,
+        fontWeight: "800",
+        color: "#1C1C1E",
+    },
+    celebrationSubtext: {
+        fontSize: 14,
+        color: "#666",
+        textAlign: "center",
+    },
+    celebrationDoneButton: {
+        backgroundColor: "#208AEF",
+        borderRadius: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 32,
+        marginTop: 12,
+    },
+    celebrationDoneText: {
+        color: "#FFFFFF",
+        fontSize: 15,
+        fontWeight: "700",
+    },
+
+    // Day-detail (spending) screen
+    dayNavRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 12,
+    },
+    dayNavLabel: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#1C1C1E",
+    },
+    dayNavButton: {
+        padding: 8,
+    },
+    dayNavButtonDisabled: {
+        opacity: 0.3,
     },
 });

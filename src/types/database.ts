@@ -48,6 +48,7 @@ export type Database = {
           category_id: string;
           created_at: string;
           id: string;
+          note: string | null;
           spent_at: string;
           user_id: string;
         };
@@ -56,6 +57,7 @@ export type Database = {
           category_id: string;
           created_at?: string;
           id?: string;
+          note?: string | null;
           spent_at?: string;
           user_id: string;
         };
@@ -64,6 +66,7 @@ export type Database = {
           category_id?: string;
           created_at?: string;
           id?: string;
+          note?: string | null;
           spent_at?: string;
           user_id?: string;
         };
