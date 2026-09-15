@@ -13,13 +13,14 @@ type Props = {
     isAdding: boolean;
     onAmountChange: (id: string, amountCents: number) => void;
     onDelete: (id: string) => void;
-    onAddCategory: (name: string) => void;
+    onAddCategory: (name: string, icon?: string) => void;
 };
 
 function BudgetSection({title, categories, totalCents, isAdding, onAmountChange, onDelete, onAddCategory}: Props) {
 
     const [isAddingOpen, setIsAddingOpen] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState("");
+    const [newCategoryIcon, setNewCategoryIcon] = useState("");
 
     return (
         <View style={bstyle.section}>
@@ -41,6 +42,14 @@ function BudgetSection({title, categories, totalCents, isAdding, onAmountChange,
 
                 {isAddingOpen ? (
                     <View style={bstyle.addCategoryForm}>
+                        <TextInput
+                            style={bstyle.addCategoryIconInput}
+                            placeholder="💰"
+                            placeholderTextColor="#8E8E93"
+                            value={newCategoryIcon}
+                            onChangeText={setNewCategoryIcon}
+                            maxLength={2}
+                        />
                         <TextInput
                             style={bstyle.addCategoryInput}
                             placeholder="Category name"
@@ -67,8 +76,9 @@ function BudgetSection({title, categories, totalCents, isAdding, onAmountChange,
     function confirmAdd() {
         const name = newCategoryName.trim();
         if (!name) return;
-        onAddCategory(name);
+        onAddCategory(name, newCategoryIcon.trim() || undefined);
         setNewCategoryName("");
+        setNewCategoryIcon("");
         setIsAddingOpen(false);
     }
 }

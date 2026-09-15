@@ -1,23 +1,22 @@
-import React from 'react';
-import {ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View} from "react-native";
+import React, {useMemo, useState} from 'react';
+import {ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View} from "react-native";
 import {router} from "expo-router";
+import {Gesture, GestureDetector} from "react-native-gesture-handler";
+import {runOnJS} from "react-native-reanimated";
+import {EllipsisVertical} from "lucide-react-native";
 import {budgetStyles as bstyle} from "@/constants/budgetStyles";
+import {dashboardStyles as dstyle} from "@/constants/dashboardStyles";
 import {useSession} from "@/hooks/useSession";
-import {
-    useAddBudgetCategory,
-    useBudgetCategories,
-    useDeleteBudgetCategory,
-    useUpdateBudgetAmount,
-} from "@/hooks/useBudget";
-import {useAddExpense, useDeleteExpense, useExpensesForMonth} from "@/hooks/useExpenses";
-import {sumByCategory, sumByDay, computeHotstreak} from "@/lib/dashboard";
-import {getMonthRange} from "@/lib/date";
-import BudgetOverview from "@/components/BudgetOverview";
-import BudgetSection from "@/components/BudgetSection";
+import {useBudgetCategories} from "@/hooks/useBudget";
+import {useExpensesForMonth} from "@/hooks/useExpenses";
+import {sumByCategory} from "@/lib/dashboard";
+import {addMonths} from "@/lib/date";
 import AllowanceDonutChart from "@/components/AllowanceDonutChart";
-import HotstreakCalendar from "@/components/HotstreakCalendar";
-import AddExpenseForm from "@/components/AddExpenseForm";
+import DashboardMenu from "@/components/DashboardMenu";
 import type {OnboardingGoal} from "@/types/database";
+
+const SWIPE_THRESHOLD = 60;
+const MONTH_LABEL_FORMAT: Intl.DateTimeFormatOptions = {month: "long", year: "numeric"};
 
 const GOAL_SUBTITLES: Record<OnboardingGoal, string> = {
     housing: "Let's keep your rent and living costs in check.",
@@ -31,26 +30,34 @@ function DashboardScreen() {
     const user = useSession((state) => state.user);
     const signOut = useSession((state) => state.signOut);
     const categoriesQuery = useBudgetCategories();
-    const addCategory = useAddBudgetCategory();
-    const updateAmount = useUpdateBudgetAmount();
-    const deleteCategory = useDeleteBudgetCategory();
 
-    const expensesQuery = useExpensesForMonth();
-    const addExpense = useAddExpense();
-    const deleteExpense = useDeleteExpense();
+    const [monthOffset, setMonthOffset] = useState(0);
+    const referenceDate = useMemo(() => addMonths(new Date(), monthOffset), [monthOffset]);
+    const expensesQuery = useExpensesForMonth(referenceDate);
+
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const categories = categoriesQuery.data ?? [];
-    const incomeCategories = categories.filter((category) => category.type === "income");
     const expenseCategories = categories.filter((category) => category.type === "expense");
-    const totalIncomeCents = sumAmounts(incomeCategories);
-    const totalExpensesCents = sumAmounts(expenseCategories);
 
     const expenses = expensesQuery.data ?? [];
     const spentByCategory = sumByCategory(expenses);
-    const dailyTotals = sumByDay(expenses);
-    const {daysInMonth} = getMonthRange();
-    const dailyBudgetCents = Math.round(totalExpensesCents / daysInMonth);
-    const streak = computeHotstreak(dailyTotals, dailyBudgetCents);
+
+    function goToPreviousMonth() {
+        setMonthOffset((offset) => offset - 1);
+    }
+
+    function goToNextMonth() {
+        setMonthOffset((offset) => Math.min(offset + 1, 0));
+    }
+
+    const monthSwipe = Gesture.Pan().onEnd((event) => {
+        if (event.translationX <= -SWIPE_THRESHOLD) {
+            runOnJS(goToPreviousMonth)();
+        } else if (event.translationX >= SWIPE_THRESHOLD) {
+            runOnJS(goToNextMonth)();
+        }
+    });
 
     const subtitle = user?.goal ? GOAL_SUBTITLES[user.goal] : "Here's your monthly budget.";
     const isLoading = categoriesQuery.isLoading || expensesQuery.isLoading;
@@ -61,66 +68,48 @@ function DashboardScreen() {
             behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
             <ScrollView style={bstyle.scroll} contentContainerStyle={bstyle.scrollContent} keyboardShouldPersistTaps="handled">
-                <View style={bstyle.header}>
-                    <Text style={bstyle.headerTitle}>Hi {user?.name ?? "there"} 👋</Text>
-                    <Text style={bstyle.headerSubtitle}>{subtitle}</Text>
+                <View style={bstyle.headerRow}>
+                    <View style={bstyle.header}>
+                        <Text style={bstyle.headerTitle}>Hi {user?.name ?? "there"} 👋</Text>
+                        <Text style={bstyle.headerSubtitle}>{subtitle}</Text>
+                    </View>
+                    <Pressable style={bstyle.menuButton} onPress={() => setIsMenuOpen(true)} hitSlop={8}>
+                        <EllipsisVertical size={22} color="#1C1C1E" />
+                    </Pressable>
                 </View>
 
                 {isLoading ? (
                     <ActivityIndicator />
                 ) : (
                     <>
-                        <AllowanceDonutChart expenseCategories={expenseCategories} spentByCategory={spentByCategory} />
+                        <GestureDetector gesture={monthSwipe}>
+                            <View style={{gap: 12}}>
+                                <Text style={[dstyle.dayNavLabel, {textAlign: "center"}]}>{referenceDate.toLocaleDateString("en-GB", MONTH_LABEL_FORMAT)}</Text>
+                                <AllowanceDonutChart expenseCategories={expenseCategories} spentByCategory={spentByCategory} />
+                            </View>
+                        </GestureDetector>
 
-                        <HotstreakCalendar dailyTotals={dailyTotals} dailyBudgetCents={dailyBudgetCents} streak={streak} />
-
-                        <AddExpenseForm
-                            expenseCategories={expenseCategories}
-                            recentExpenses={expenses}
-                            isSubmitting={addExpense.isPending}
-                            onAddExpense={(categoryId, amountCents, spentAt) =>
-                                addExpense.mutate(
-                                    {categoryId, amountCents, spentAt},
-                                    {onError: (error) => Alert.alert("Couldn't log expense", error.message)},
-                                )
-                            }
-                            onDeleteExpense={(id) => deleteExpense.mutate(id)}
-                        />
-
-                        <BudgetOverview totalIncomeCents={totalIncomeCents} totalExpensesCents={totalExpensesCents} />
-
-                        <BudgetSection
-                            title="Income"
-                            categories={incomeCategories}
-                            totalCents={totalIncomeCents}
-                            isAdding={addCategory.isPending}
-                            onAmountChange={(id, amountCents) => updateAmount.mutate({id, amountCents})}
-                            onDelete={(id) => deleteCategory.mutate(id)}
-                            onAddCategory={(name) => addCategory.mutate({name, type: "income"})}
-                        />
-
-                        <BudgetSection
-                            title="Expenses"
-                            categories={expenseCategories}
-                            totalCents={totalExpensesCents}
-                            isAdding={addCategory.isPending}
-                            onAmountChange={(id, amountCents) => updateAmount.mutate({id, amountCents})}
-                            onDelete={(id) => deleteCategory.mutate(id)}
-                            onAddCategory={(name) => addCategory.mutate({name, type: "expense"})}
-                        />
+                        <Pressable style={dstyle.logButton} onPress={() => router.push('/log-expense')}>
+                            <Text style={dstyle.logButtonText}>Log expenses</Text>
+                        </Pressable>
                     </>
                 )}
-
-                <Pressable style={bstyle.signOutButton} onPress={() => signOut().then(() => router.replace('/login'))}>
-                    <Text style={bstyle.signOutText}>Sign out</Text>
-                </Pressable>
             </ScrollView>
+
+            <DashboardMenu
+                visible={isMenuOpen}
+                onClose={() => setIsMenuOpen(false)}
+                onSignOut={() => {
+                    setIsMenuOpen(false);
+                    signOut().then(() => router.replace('/login'));
+                }}
+                onAccountSettings={() => {
+                    setIsMenuOpen(false);
+                    router.push('/account-settings');
+                }}
+            />
         </KeyboardAvoidingView>
     );
-}
-
-function sumAmounts(categories: {amount_cents: number}[]): number {
-    return categories.reduce((sum, category) => sum + category.amount_cents, 0);
 }
 
 export default DashboardScreen;

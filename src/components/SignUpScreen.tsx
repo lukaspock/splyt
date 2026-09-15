@@ -14,6 +14,7 @@ function SignUpScreen() {
     const signUp = useSession((state) => state.signUp);
     const name = useOnboarding((state) => state.name);
     const goal = useOnboarding((state) => state.goal);
+    const selectedCategories = useOnboarding((state) => state.selectedCategories);
     const resetOnboarding = useOnboarding((state) => state.reset);
 
     useEffect(() => {
@@ -24,7 +25,7 @@ function SignUpScreen() {
 
     const signUpMutation = useMutation({
         mutationFn: ({email, password}: {email: string, password: string}) =>
-            signUp(name, email, password, goal),
+            signUp(name, email, password, goal, selectedCategories),
     });
 
     const { control, handleSubmit, formState: { errors } } = useForm({

@@ -54,4 +54,28 @@ export const onboardingStyles = StyleSheet.create({
     color: "#666",
     marginTop: 2,
   },
+  categoryList: {
+    gap: 4,
+    marginTop: 20,
+    marginBottom: 24,
+  },
+  categoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#D1D1D9",
+  },
+  categoryIcon: {
+    fontSize: 20,
+    width: 26,
+    textAlign: "center",
+  },
+  categoryName: {
+    flex: 1,
+    fontSize: 15,
+    color: "#1C1C1E",
+  },
 });

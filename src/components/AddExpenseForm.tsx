@@ -10,7 +10,7 @@ type Props = {
     expenseCategories: BudgetCategory[];
     recentExpenses: Expense[];
     isSubmitting: boolean;
-    onAddExpense: (categoryId: string, amountCents: number, spentAt: string) => void;
+    onAddExpense: (categoryId: string, amountCents: number, spentAt: string, note: string) => void;
     onDeleteExpense: (id: string) => void;
 };
 
@@ -18,7 +18,7 @@ function AddExpenseForm({expenseCategories, recentExpenses, isSubmitting, onAddE
 
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(expenseCategories[0]?.id ?? null);
     const [amountText, setAmountText] = useState("");
-    const [isYesterday, setIsYesterday] = useState(false);
+    const [noteText, setNoteText] = useState("");
     const [amountError, setAmountError] = useState<string | null>(null);
     const [justLogged, setJustLogged] = useState(false);
 
@@ -55,35 +55,26 @@ function AddExpenseForm({expenseCategories, recentExpenses, isSubmitting, onAddE
                 ))}
             </ScrollView>
 
-            <View style={dstyle.expenseFormRow}>
-                <View style={dstyle.expenseAmountWrapper}>
-                    <Text style={dstyle.amountPrefix}>€</Text>
-                    <TextInput
-                        style={dstyle.expenseAmountInput}
-                        keyboardType="decimal-pad"
-                        placeholder="0.00"
-                        placeholderTextColor="#8E8E93"
-                        value={amountText}
-                        onChangeText={(text) => { setAmountText(text); setAmountError(null); }}
-                    />
-                </View>
-
-                <View style={dstyle.dayToggle}>
-                    <Pressable
-                        style={[dstyle.dayToggleOption, !isYesterday && dstyle.dayToggleOptionSelected]}
-                        onPress={() => setIsYesterday(false)}
-                    >
-                        <Text style={[dstyle.dayToggleText, !isYesterday && dstyle.dayToggleTextSelected]}>Today</Text>
-                    </Pressable>
-                    <Pressable
-                        style={[dstyle.dayToggleOption, isYesterday && dstyle.dayToggleOptionSelected]}
-                        onPress={() => setIsYesterday(true)}
-                    >
-                        <Text style={[dstyle.dayToggleText, isYesterday && dstyle.dayToggleTextSelected]}>Yesterday</Text>
-                    </Pressable>
-                </View>
+            <View style={dstyle.expenseAmountWrapper}>
+                <Text style={dstyle.amountPrefix}>€</Text>
+                <TextInput
+                    style={dstyle.expenseAmountInput}
+                    keyboardType="decimal-pad"
+                    placeholder="0.00"
+                    placeholderTextColor="#8E8E93"
+                    value={amountText}
+                    onChangeText={(text) => { setAmountText(text); setAmountError(null); }}
+                />
             </View>
             {amountError && <Text style={dstyle.fieldError}>{amountError}</Text>}
+
+            <TextInput
+                style={dstyle.noteInput}
+                placeholder="What was this for? (optional)"
+                placeholderTextColor="#8E8E93"
+                value={noteText}
+                onChangeText={setNoteText}
+            />
 
             <Pressable
                 style={[dstyle.logButton, (!selectedCategoryId || isSubmitting) && dstyle.logButtonDisabled]}
@@ -104,7 +95,10 @@ function AddExpenseForm({expenseCategories, recentExpenses, isSubmitting, onAddE
                         return (
                             <View key={expense.id} style={dstyle.recentRow}>
                                 <Text style={dstyle.rowIcon}>{category?.icon ?? "💸"}</Text>
-                                <Text style={dstyle.recentName} numberOfLines={1}>{category?.name ?? "Deleted category"}</Text>
+                                <View style={{flex: 1}}>
+                                    <Text style={dstyle.recentName} numberOfLines={1}>{category?.name ?? "Deleted category"}</Text>
+                                    {!!expense.note && <Text style={dstyle.recentNote} numberOfLines={1}>{expense.note}</Text>}
+                                </View>
                                 <Text style={dstyle.recentDate}>{expense.spent_at}</Text>
                                 <Text style={dstyle.recentAmount}>{formatCentsAsDisplay(expense.amount_cents)}</Text>
                                 <Pressable onPress={() => onDeleteExpense(expense.id)} hitSlop={8}>
@@ -125,10 +119,9 @@ function AddExpenseForm({expenseCategories, recentExpenses, isSubmitting, onAddE
             setAmountError("Enter an amount greater than 0");
             return;
         }
-        const date = new Date();
-        if (isYesterday) date.setDate(date.getDate() - 1);
-        onAddExpense(selectedCategoryId, amountCents, toISODate(date));
+        onAddExpense(selectedCategoryId, amountCents, toISODate(new Date()), noteText.trim());
         setAmountText("");
+        setNoteText("");
         setAmountError(null);
         setJustLogged(true);
         setTimeout(() => setJustLogged(false), 1500);

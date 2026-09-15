@@ -14,6 +14,7 @@ type SessionState = {
     email: string,
     password: string,
     goal: OnboardingGoal | null,
+    selectedCategories: string[],
   ) => Promise<Session | null>;
   signOut: () => Promise<void>;
 };
@@ -48,11 +49,11 @@ export const useSession = create<SessionState>((set) => ({
     set({ session: data.session, user, isLoading: false });
   },
 
-  signUp: async (name, email, password, goal) => {
+  signUp: async (name, email, password, goal, selectedCategories) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name, goal } },
+      options: { data: { name, goal, selected_categories: selectedCategories } },
     });
     if (error) throw error;
     if (data.session) {
