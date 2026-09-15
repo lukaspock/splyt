@@ -1,37 +1,66 @@
-import React, {useRef, useState} from 'react';
-import  {defaultStyles as style } from "@/constants/defaultStyles";
-import {ActivityIndicator, Pressable, Text, TextInput, View} from "react-native";
-import {Eye, EyeOff} from "lucide-react-native";
+import React, {useEffect, useRef, useState} from 'react';
+import {defaultStyles as style} from "@/constants/defaultStyles";
+import {ActivityIndicator, Alert, Pressable, Text, TextInput, View} from "react-native";
+import {Eye, EyeOff, MailCheck} from "lucide-react-native";
 import {useMutation} from "@tanstack/react-query";
 import {useSession} from "@/hooks/useSession";
+import {useOnboarding} from "@/hooks/useOnboarding";
 import {router} from "expo-router";
 import {Controller, useForm} from "react-hook-form";
-import { Alert } from "react-native";
 import {friendlyAuthError} from "@/lib/authErrors";
 
+function SignUpScreen() {
 
+    const signUp = useSession((state) => state.signUp);
+    const name = useOnboarding((state) => state.name);
+    const goal = useOnboarding((state) => state.goal);
+    const resetOnboarding = useOnboarding((state) => state.reset);
 
-function LoginScreen() {
+    useEffect(() => {
+        if (!name) router.replace('/onboarding');
+    }, [name]);
 
-    const signIn = useSession((state) => state.signIn);
-    const loginMutation = useMutation({
-        mutationFn: ({email, password}: {email: string, password: string}) => signIn(email, password),
+    const [pendingConfirmationEmail, setPendingConfirmationEmail] = useState<string | null>(null);
+
+    const signUpMutation = useMutation({
+        mutationFn: ({email, password}: {email: string, password: string}) =>
+            signUp(name, email, password, goal),
     });
 
     const { control, handleSubmit, formState: { errors } } = useForm({
-        defaultValues: { email: "" , password: ""},
+        defaultValues: { email: "", password: "" },
         mode: "onChange",
     });
 
     const [hidePassword, setHidePassword] = useState(true);
     const passwordInputRef = useRef<TextInput>(null);
 
+    if (pendingConfirmationEmail) {
+        return (
+            <View style={style.container}>
+                <MailCheck size={48} color="#208AEF" />
+                <Text style={style.title}>Check your inbox</Text>
+                <Text style={style.subtitle}>
+                    We sent a confirmation link to{"\n"}
+                    <Text style={{fontWeight: "600"}}>{pendingConfirmationEmail}</Text>.
+                    {"\n"}Tap it, then come back and log in.
+                </Text>
+
+                <Pressable
+                    style={style.button}
+                    onPress={() => { resetOnboarding(); router.replace('/login'); }}
+                >
+                    <Text style={style.buttonText}>Back to login</Text>
+                </Pressable>
+            </View>
+        );
+    }
 
     return (
         <>
             <View style={style.container}>
-                <Text style={style.title}>Welcome To SPLYT</Text>
-                <Text style={style.subtitle}>The new way to split finances! 💸</Text>
+                <Text style={style.title}>Hi {name} 👋</Text>
+                <Text style={style.subtitle}>Last step — set your login</Text>
             </View>
 
             <View>
@@ -84,7 +113,7 @@ function LoginScreen() {
                                 autoCapitalize="none"
                                 secureTextEntry={hidePassword}
                                 returnKeyType="done"
-                                onSubmitEditing={handleSubmit(proceedToLogin)}
+                                onSubmitEditing={handleSubmit(proceedToSignUp)}
                                 value={value}
                                 onChangeText={onChange}
                             />
@@ -103,44 +132,47 @@ function LoginScreen() {
                     )}
                 />
                 {errors.password && <Text style={style.errorText}>{errors.password.message}</Text>}
-
             </View>
 
             <View style={style.container}>
                 <Pressable
-                    disabled={loginMutation.isPending}
+                    disabled={signUpMutation.isPending}
                     style={({ pressed }) => [
                         style.button,
-                        loginMutation.isPending && style.buttonDisabled,
-                        pressed && !loginMutation.isPending && style.buttonPressed,
+                        signUpMutation.isPending && style.buttonDisabled,
+                        pressed && !signUpMutation.isPending && style.buttonPressed,
                     ]}
-                    onPress={handleSubmit(proceedToLogin)}
+                    onPress={handleSubmit(proceedToSignUp)}
                 >
-                    {loginMutation.isPending ? (
+                    {signUpMutation.isPending ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <Text style={style.buttonText}>Login</Text>
+                        <Text style={style.buttonText}>Sign Up</Text>
                     )}
                 </Pressable>
             </View>
 
-            <Pressable onPress={() => router.push('/onboarding')}>
-                <Text style={style.linkText}>No account yet? Sign up</Text>
+            <Pressable onPress={() => { resetOnboarding(); router.replace('/login'); }}>
+                <Text style={style.linkText}>Already have an account? Log in</Text>
             </Pressable>
         </>
     );
 
-    function proceedToLogin(data: {email: string, password: string}){
-
-        loginMutation.mutate(data, {
-            onSuccess: () => {
-                router.replace('/home');
+    function proceedToSignUp(data: {email: string, password: string}){
+        signUpMutation.mutate(data, {
+            onSuccess: (session) => {
+                if (session) {
+                    resetOnboarding();
+                    router.replace('/home');
+                } else {
+                    setPendingConfirmationEmail(data.email);
+                }
             },
             onError: (error) => {
-                Alert.alert("Login failed", friendlyAuthError(error.message));
+                Alert.alert("Sign up failed", friendlyAuthError(error.message));
             },
         });
     }
 }
 
-export default LoginScreen;
+export default SignUpScreen;
