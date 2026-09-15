@@ -11,6 +11,9 @@ const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 export const supabase = createClient<Database>(supabaseUrl, supabasePublishableKey, {
   auth: {
     persistSession: true,
-    detectSessionInUrl: false,
+    // Confirmation/magic-link emails redirect back to the Site URL with the
+    // session in the URL hash (#access_token=...) — pick it up automatically
+    // so clicking the link actually logs the user in on web.
+    detectSessionInUrl: true,
   },
 });
